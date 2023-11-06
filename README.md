@@ -27,6 +27,7 @@ CONFIGURE APACHE AS A LOAD BALANCER
 
 3. We will install Apache Load Balancer on Project-8-apache-lb server and configure it to point traffic coming to LB to both Web Servers:
 
+```
 #Install apache2
 sudo apt update
 sudo apt install apache2 -y
@@ -42,3 +43,83 @@ sudo a2enmod lbmethod_bytraffic
 
 #Restart apache2 service
 sudo systemctl restart apache2
+```
+
+After apache2 successful installation and enabling all necessary modules the image below shows our apache load balancer is up and running.
+
+![Screenshot 2023-06-21 053318](https://github.com/opeyemiogungbe/Darey.io-PBL-PROJECT/assets/136735745/7feff130-55f1-47fe-8ed7-e3cc2f877021)
+
+
+**Configure load balancing**
+
+```
+sudo vi /etc/apache2/sites-available/000-default.conf
+
+#Add this configuration into this section <VirtualHost *:80>  </VirtualHost>
+
+<Proxy "balancer://mycluster">
+               BalancerMember http://<WebServer1-Private-IP-Address>:80 loadfactor=5 timeout=1
+               BalancerMember http://<WebServer2-Private-IP-Address>:80 loadfactor=5 timeout=1
+               ProxySet lbmethod=bytraffic
+               # ProxySet lbmethod=byrequests
+        </Proxy>
+
+        ProxyPreserveHost On
+        ProxyPass / balancer://mycluster/
+        ProxyPassReverse / balancer://mycluster/
+
+#Restart apache server
+
+sudo systemctl restart apache2
+```
+
+![Screenshot 2023-08-29 052041](https://github.com/opeyemiogungbe/Pbl-project7/assets/136735745/096f6aec-3f1f-4d20-a44b-6c37ee8b3bf6)
+
+The above image shows our load balancer configuration method which is bytraffic balancing method. This method will distribute incoming load between our Web Servers according to current traffic load. We can control in which proportion the traffic must be distributed by loadfactor parameter. In thhe settings above our loadfactor parameters is set to 5 traffic request each. We allso have other load balancing method like: bybusyness, byrequests, heartbeat.
+
+
+Next we will verify that our configuration works – try to access your LB’s public IP address or Public DNS name from your browser:
+
+http://<Load-Balancer-Public-IP-Address-or-Public-DNS-Name>/index.php
+
+![Screenshot 2023-08-29 053214](https://github.com/opeyemiogungbe/Pbl-project7/assets/136735745/3a54eea2-b742-498a-b4c8-031723d9bffd)
+
+The image above is the result of our load balancer directing traffic to our tooling website from project7
+
+**Optional Step – Configure Local DNS Names Resolution**
+
+We can also choose to configure local domain name resolution to help us remember and switch between IP addresses using /etc/hosts file, which is very easy to configure but not very scalable.
+
+```
+#Open this file on your LB server
+
+sudo vi /etc/hosts
+
+#Add 2 records into this file with Local IP address and arbitrary name for both of your Web Servers
+
+<WebServer1-Private-IP-Address> Web1
+<WebServer2-Private-IP-Address> Web2
+```
+
+![Screenshot 2023-08-29 061057](https://github.com/opeyemiogungbe/Pbl-project7/assets/136735745/0e5e3f25-d341-4752-8f79-58090463298d)
+
+Now you can update your LB config file with those names instead of IP addresses.
+
+```
+BalancerMember http://Web1:80 loadfactor=5 timeout=1
+BalancerMember http://Web2:80 loadfactor=5 timeout=1
+```
+
+Now we will try to curl our Web Servers from LB locally curl http://Web1 or curl http://Web2 – it shall work.
+
+
+![Screenshot 2023-08-29 072008](https://github.com/opeyemiogungbe/Pbl-project7/assets/136735745/c4ce2300-7536-4972-a6e3-5d882bfe7b41)
+
+
+![Screenshot 2023-08-29 072145](https://github.com/opeyemiogungbe/Pbl-project7/assets/136735745/6bf9aa69-ec37-4084-b336-637c307ba405)
+
+Yes! it worked now our architecture settings look like the image below:
+
+![Screenshot 2023-11-05 171346](https://github.com/opeyemiogungbe/Pbl-project7/assets/136735745/12d09110-5e49-481e-ab76-8e6901b404da)
+
+we are done with our load balancing project.
